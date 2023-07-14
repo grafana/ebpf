@@ -17,10 +17,8 @@ type encoderOptions struct {
 }
 
 // kernelEncoderOptions will generate BTF suitable for the current kernel.
-var kernelEncoderOptions encoderOptions
-
-func init() {
-	kernelEncoderOptions = encoderOptions{
+func kernelEncoderOptions() encoderOptions {
+	return encoderOptions{
 		ByteOrder:        internal.NativeEndian,
 		StripFuncLinkage: haveFuncLinkage() != nil,
 	}

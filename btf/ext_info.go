@@ -133,7 +133,7 @@ func (ei *ExtInfos) Assign(insns asm.Instructions, section string) {
 
 var nativeEncoderPool = sync.Pool{
 	New: func() any {
-		return newEncoder(kernelEncoderOptions, nil)
+		return newEncoder(kernelEncoderOptions(), nil)
 	},
 }
 

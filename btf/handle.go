@@ -30,7 +30,7 @@ func NewHandle(spec *Spec) (*Handle, error) {
 		return nil, fmt.Errorf("can't load %s BTF on %s", spec.byteOrder, internal.NativeEndian)
 	}
 
-	enc := newEncoder(kernelEncoderOptions, newStringTableBuilderFromTable(spec.strings))
+	enc := newEncoder(kernelEncoderOptions(), newStringTableBuilderFromTable(spec.strings))
 
 	for _, typ := range spec.types {
 		_, err := enc.Add(typ)
