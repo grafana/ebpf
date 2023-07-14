@@ -16,10 +16,11 @@ var (
 		MinimumVersion: internal.Version{5, 11, 0},
 		Name:           "memcg-based accounting for BPF memory",
 	}
+	haveMemcgAccounting     error
+	haveMemcgAccountingInit sync.Once
 
 	rlimitMu sync.Mutex
 )
-
 
 func detectMemcgAccounting() error {
 	// Retrieve the original limit to prevent lowering Max, since
@@ -87,10 +88,10 @@ func detectMemcgAccounting() error {
 //
 // Requires CAP_SYS_RESOURCE on kernels < 5.11.
 func RemoveMemlock() error {
-	rlimitMu.Lock()
-	defer rlimitMu.Unlock()
+	haveMemcgAccountingInit.Do(func() {
+		haveMemcgAccounting = detectMemcgAccounting()
+	})
 
-	haveMemcgAccounting := detectMemcgAccounting()
 	if haveMemcgAccounting == nil {
 		return nil
 	}
@@ -98,6 +99,9 @@ func RemoveMemlock() error {
 	if !errors.Is(haveMemcgAccounting, unsupportedMemcgAccounting) {
 		return haveMemcgAccounting
 	}
+
+	rlimitMu.Lock()
+	defer rlimitMu.Unlock()
 
 	// pid 0 affects the current process. Requires CAP_SYS_RESOURCE.
 	newLimit := unix.Rlimit{Cur: unix.RLIM_INFINITY, Max: unix.RLIM_INFINITY}
