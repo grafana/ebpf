@@ -16,25 +16,10 @@ var (
 		MinimumVersion: internal.Version{5, 11, 0},
 		Name:           "memcg-based accounting for BPF memory",
 	}
-	haveMemcgAccounting error
 
 	rlimitMu sync.Mutex
 )
 
-func init() {
-	// We have to run this feature test at init, since it relies on changing
-	// RLIMIT_MEMLOCK. Doing so is not safe in a concurrent program. Instead,
-	// we rely on the initialization order guaranteed by the Go runtime to
-	// execute the test in a safe environment:
-	//
-	//    the invocation of init functions happens in a single goroutine,
-	//    sequentially, one package at a time.
-	//
-	// This is also the reason why RemoveMemlock is in its own package:
-	// we only want to run the initializer if RemoveMemlock is called
-	// from somewhere.
-	haveMemcgAccounting = detectMemcgAccounting()
-}
 
 func detectMemcgAccounting() error {
 	// Retrieve the original limit to prevent lowering Max, since
@@ -102,6 +87,10 @@ func detectMemcgAccounting() error {
 //
 // Requires CAP_SYS_RESOURCE on kernels < 5.11.
 func RemoveMemlock() error {
+	rlimitMu.Lock()
+	defer rlimitMu.Unlock()
+
+	haveMemcgAccounting := detectMemcgAccounting()
 	if haveMemcgAccounting == nil {
 		return nil
 	}
@@ -109,9 +98,6 @@ func RemoveMemlock() error {
 	if !errors.Is(haveMemcgAccounting, unsupportedMemcgAccounting) {
 		return haveMemcgAccounting
 	}
-
-	rlimitMu.Lock()
-	defer rlimitMu.Unlock()
 
 	// pid 0 affects the current process. Requires CAP_SYS_RESOURCE.
 	newLimit := unix.Rlimit{Cur: unix.RLIM_INFINITY, Max: unix.RLIM_INFINITY}
